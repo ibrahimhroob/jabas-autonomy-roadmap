@@ -224,4 +224,4 @@ The flywheel (README principle #2), concretely:
 
 Define these as **stable, versioned message contracts** early. The single best architectural decision you can make is fixing the world-model interface so you can evolve everything behind it.
 
-Next: `02-industry-analysis.md` — how the leaders actually build this and what to steal.
+Next: [`02-industry-analysis.md`](02-industry-analysis.md) — how the leaders actually build this and what to steal.
