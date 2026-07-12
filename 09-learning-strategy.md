@@ -71,7 +71,7 @@ Great learning *alternates* them. Concretely: grind a hard concept in a focused 
 
 The internet (and this roadmap) can bury you. Defenses:
 1. **One source per concept at a time.** Pick *the* book/lecture for a topic (from `06`) and ignore the rest until you finish. Chasing "the best resource" is procrastination in disguise. The best resource is the one you actually finish.
-2. **Just-in-time, not just-in-case.** Learn things when a project needs them, not because they might be useful someday. `05` + `07` sequence learning to real needs so you're never learning in the abstract.
+2. **Just-in-time, not just-in-case.** Learn things when a project needs them, not because they might be useful someday. [`05-flagship-projects.md`](05-flagship-projects.md) + [`07-52-week-study-plan.md`](07-52-week-study-plan.md) sequence learning to real needs so you're never learning in the abstract.
 3. **A "someday" list.** When an interesting-but-irrelevant rabbit hole appears, write it on a someday list and *close the tab*. This satisfies the fear of missing it without derailing you. Review the list quarterly; 90% won't matter.
 4. **Cap inputs.** One newsletter, a handful of YouTube channels, papers only when a project calls for them. Frontier *awareness* is a 30-min/week activity, not a daily anxiety.
 5. **The 2-minute triage for any new resource:** Is it foundational to *this* week? If no → someday list. If yes → is it the *single best* one? If not → find that one, use only it.
