@@ -23,6 +23,8 @@ This is a **CTO-level mentorship program**, not a tutorial. It is deliberately o
 | `07-52-week-study-plan.md` | A full year, week by week | Your operating cadence |
 | `08-personal-mastery-and-evolution.md` | What *you* master + the career arc | Personal development |
 | `09-learning-strategy.md` | How to learn hard things without burning out | Read when overwhelmed |
+| `10-implementation-guide.md` | Build plan: tech decisions, workspace/code structure, verified repos, Phase 0/1 how-to | Engineering execution |
+| `11-reference-library.md` | Annotated catalogue of real repos, datasets, courses, papers to build on | Pick tools to integrate |
 
 **A rule for this whole document:** you will never study everything here. That is the point. This is a *map of the territory* so you can choose routes deliberately instead of reacting. The `09-learning-strategy.md` file is arguably the most important — read it early.
 
