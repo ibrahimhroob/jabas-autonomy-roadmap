@@ -50,7 +50,7 @@ You understand something only when you can explain it simply to someone who does
 - **Anchor to a fixed schedule.** Same times each week. Decisions ("when will I study?") drain willpower; a schedule removes the decision. Treat these blocks like unmissable meetings with yourself.
 
 ### The double-dip principle (your unfair advantage)
-You have something students don't: **a real robot and real problems.** Wherever possible, make your study *be* your work. The 52-week plan is designed so its exercises ship the Phase 0/1 projects. When learning and building are the same activity, you get 2x return on every hour and you never have to choose between "career" and "study." Always ask: *how does this week's concept touch our stack this week?* (`07` answers this per week.)
+You have something students don't: **a real robot and real problems.** Wherever possible, make your study *be* your work. The 52-week plan is designed so its exercises ship the Phase 0/1 projects. When learning and building are the same activity, you get 2x return on every hour and you never have to choose between "career" and "study." Always ask: *how does this week's concept touch our stack this week?* ([`07-52-week-study-plan.md`](07-52-week-study-plan.md) answers this per week.)
 
 ### Energy, not just time
 - **Sleep is a learning tool.** Memory consolidates during sleep; a well-rested 6 hours of study beats an exhausted 10. Protect sleep the week you tackle hard math.
