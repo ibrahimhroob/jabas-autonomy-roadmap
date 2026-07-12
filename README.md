@@ -13,16 +13,16 @@ This is a **CTO-level mentorship program**, not a tutorial. It is deliberately o
 
 | File | What it gives you | When to use it |
 |---|---|---|
-| `README.md` (this file) | Philosophy, north-star architecture, mental models | Read first, re-read quarterly |
-| `01-architecture.md` | The full stack, sensor → cloud, every subsystem | Your architectural bible |
-| `02-industry-analysis.md` | How Tesla/Waymo/NVIDIA/Amazon/Deere/BD build autonomy + how to adapt to ag | Strategy & inspiration |
-| `03-nav2-weaknesses-and-differentiators.md` | Honest critique of Nav2 + your moat | Product differentiation |
-| `04-capability-deep-dives.md` | Per-capability: theory, math, algorithms, arch, ROS 2, pitfalls, open research | Engineering reference |
-| `05-flagship-projects.md` | Ambitious-but-practical multi-year projects | Execution backlog |
-| `06-resources.md` | Books, courses, papers, repos, talks, blogs, channels | Curated learning library |
-| `07-52-week-study-plan.md` | A full year, week by week | Your operating cadence |
-| `08-personal-mastery-and-evolution.md` | What *you* master + the career arc | Personal development |
-| `09-learning-strategy.md` | How to learn hard things without burning out | Read when overwhelmed |
+| [`README.md`](README.md) (this file) | Philosophy, north-star architecture, mental models | Read first, re-read quarterly |
+| [`01-architecture.md`](01-architecture.md) | The full stack, sensor → cloud, every subsystem | Your architectural bible |
+| [`02-industry-analysis.md`](02-industry-analysis.md) | How Tesla/Waymo/NVIDIA/Amazon/Deere/BD build autonomy + how to adapt to ag | Strategy & inspiration |
+| [`03-nav2-weaknesses-and-differentiators.md`](03-nav2-weaknesses-and-differentiators.md) | Honest critique of Nav2 + your moat | Product differentiation |
+| [`04-capability-deep-dives.md`](04-capability-deep-dives.md) | Per-capability: theory, math, algorithms, arch, ROS 2, pitfalls, open research | Engineering reference |
+| [`05-flagship-projects.md`](05-flagship-projects.md) | Ambitious-but-practical multi-year projects | Execution backlog |
+| [`06-resources.md`](06-resources.md) | Books, courses, papers, repos, talks, blogs, channels | Curated learning library |
+| [`07-52-week-study-plan.md`](07-52-week-study-plan.md) | A full year, week by week | Your operating cadence |
+| [`08-personal-mastery-and-evolution.md`](08-personal-mastery-and-evolution.md) | What *you* master + the career arc | Personal development |
+| [`09-learning-strategy.md`](09-learning-strategy.md) | How to learn hard things without burning out | Read when overwhelmed |
 | `10-implementation-guide.md` | Build plan: tech decisions, workspace/code structure, verified repos, Phase 0/1 how-to | Engineering execution |
 | `11-reference-library.md` | Annotated catalogue of real repos, datasets, courses, papers to build on | Pick tools to integrate |
 
