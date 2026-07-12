@@ -115,4 +115,4 @@ You do not have to understand the whole autonomy stack. You have to understand *
 
 ---
 
-*End of roadmap. Start at the `README.md`, then `09` (this file), then `07` week 1 — and take the first step.*
+*End of roadmap. Start at the [`README.md`](README.md), then [`09-learning-strategy.md`](09-learning-strategy.md) (this file), then [`07-52-week-study-plan.md`](07-52-week-study-plan.md) week 1 — and take the first step.*
