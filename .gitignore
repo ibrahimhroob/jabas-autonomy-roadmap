@@ -1,0 +1,22 @@
+# ROS 2 / colcon
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Data / logs (never commit large bags)
+*.mcap
+*.db3
+tests/replay/*.mcap
+metrics_*.json
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store

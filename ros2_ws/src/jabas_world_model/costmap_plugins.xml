@@ -1,0 +1,9 @@
+<library path="jabas_world_model_layer">
+  <class type="jabas_world_model::WorldModelLayer" base_class_type="nav2_costmap_2d::Layer">
+    <description>
+      Renders the JABAS world model's traversability grid into a Nav2 costmap,
+      combining with existing layers via max. Migration bridge from a flat
+      costmap to the persistent semantic temporal world model (C1).
+    </description>
+  </class>
+</library>

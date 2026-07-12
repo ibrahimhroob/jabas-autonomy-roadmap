@@ -1,0 +1,45 @@
+name: ros2-build
+
+# Builds and lints the ROS 2 workspace against Jazzy inside the official image.
+# This is the "does it compile + pass lint" gate. The replay-CI gate is separate.
+
+on:
+  push:
+    branches: [main]
+    paths: ["ros2_ws/**", ".github/workflows/ros2-build.yml"]
+  pull_request:
+    paths: ["ros2_ws/**", ".github/workflows/ros2-build.yml"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ros:jazzy-ros-base
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (rosdep + Nav2)
+        shell: bash
+        run: |
+          set -e
+          apt-get update
+          rosdep update
+          rosdep install --from-paths ros2_ws/src --ignore-src -r -y || true
+          # Nav2 costmap dev headers are required by jabas_world_model.
+          apt-get install -y ros-jazzy-nav2-costmap-2d || true
+
+      - name: Build
+        shell: bash
+        run: |
+          set -e
+          source /opt/ros/jazzy/setup.bash
+          cd ros2_ws
+          colcon build --symlink-install --event-handlers console_direct+
+
+      - name: Test + lint
+        shell: bash
+        run: |
+          set -e
+          source /opt/ros/jazzy/setup.bash
+          cd ros2_ws
+          colcon test --event-handlers console_direct+ --return-code-on-test-failure
