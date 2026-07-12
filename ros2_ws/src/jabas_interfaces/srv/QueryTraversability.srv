@@ -1,0 +1,9 @@
+# Query the world model's traversability at a set of world-frame points.
+# Points are interpreted in `frame_id` (default: the world model's global frame).
+
+string frame_id
+geometry_msgs/Point[] query_points
+---
+float32[] risk                  # [0,1] per query point (aligned with query_points)
+float32[] uncertainty           # per query point
+bool[] in_bounds                # false if the point lies outside the current map

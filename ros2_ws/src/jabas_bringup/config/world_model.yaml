@@ -1,0 +1,15 @@
+# Parameters for the persistent temporal world model node (C1 skeleton).
+world_model_node:
+  ros__parameters:
+    global_frame: "map"
+    scan_topic: "scan"
+    resolution: 0.1          # meters/cell
+    width_m: 50.0            # grid extent x
+    height_m: 50.0           # grid extent y
+    publish_rate_hz: 5.0
+    # Temporal persistence knobs -- the fix for Nav2's memoryless costmap.
+    #   decay closer to 1.0  => remembers longer (risk: stale obstacles)
+    #   decay lower           => forgets faster  (risk: re-collision/oscillation)
+    decay: 0.98
+    log_odds_hit: 0.85
+    log_odds_clamp: 5.0

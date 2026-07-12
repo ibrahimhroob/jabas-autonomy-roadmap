@@ -1,0 +1,53 @@
+name: replay-ci
+
+# Log-driven regression gate (P0.1). On every PR, replay curated field bags and
+# assert autonomy metrics have not regressed vs committed baselines.
+#
+# This skeleton runs the METRICS step against sample bags in tests/replay/.
+# Wire the full replay (replay_runner.py) once you have a built workspace image
+# and a curated bag library (Git-LFS/DVC or an artifact store -- do NOT commit
+# large bags to git).
+
+on:
+  pull_request:
+    paths:
+      - "ros2_ws/**"
+      - "tools/**"
+      - "tests/replay/**"
+      - ".github/workflows/replay-ci.yml"
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tooling
+        run: pip install -r tools/requirements.txt
+
+      - name: Run metrics on sample bags
+        shell: bash
+        run: |
+          set -e
+          shopt -s nullglob
+          bags=(tests/replay/*.mcap)
+          if [ ${#bags[@]} -eq 0 ]; then
+            echo "No sample bags in tests/replay/ yet -- skipping (add bags to enable)."
+            exit 0
+          fi
+          for bag in "${bags[@]}"; do
+            name=$(basename "$bag" .mcap)
+            base="tests/replay/baselines/${name}.json"
+            echo "== $name =="
+            if [ -f "$base" ]; then
+              python3 tools/metrics_extractor.py --bag "$bag" \
+                --out "metrics_${name}.json" --baseline "$base" --tolerance 0.1
+            else
+              python3 tools/metrics_extractor.py --bag "$bag" --out "metrics_${name}.json"
+              echo "  (no baseline committed; recording metrics only)"
+            fi
+          done

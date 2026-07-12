@@ -1,0 +1,29 @@
+# HOW TO WIRE THE WORLD MODEL INTO YOUR EXISTING NAV2 STACK.
+#
+# This is a PATCH illustrating the changes to your local_costmap (and/or
+# global_costmap) in your existing nav2_params.yaml. It does NOT replace your
+# full Nav2 config. Add "jabas_world_model_layer" to the plugins list and the
+# matching parameter block. NavFn + MPPI keep running unchanged; the world
+# model now contributes cost via the costmap. This is the zero-disruption
+# migration bridge (10-implementation-guide.md section 2).
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      # ... your existing params (update_frequency, robot_radius, etc.) ...
+      plugins: ["obstacle_layer", "jabas_world_model_layer", "inflation_layer"]
+
+      jabas_world_model_layer:
+        plugin: "jabas_world_model::WorldModelLayer"
+        enabled: true
+        # Topic published by world_model_node (~/traversability).
+        topic: "/world_model_node/traversability"
+        # risk in [0,1]; >= threshold is treated as a lethal obstacle.
+        risk_lethal_threshold: 0.9
+
+      # inflation_layer must come AFTER the world model layer so it inflates
+      # the world-model-derived obstacles too.
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        inflation_radius: 0.55
+        cost_scaling_factor: 3.0

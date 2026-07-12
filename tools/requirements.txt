@@ -1,0 +1,3 @@
+# Tooling deps for replay/metrics (run OUTSIDE the ROS build; plain Python).
+rosbags>=0.9        # ROS 2 bag/MCAP reading + message deserialization (no ROS runtime)
+mcap>=1.1           # low-level MCAP reader (fallback path)
