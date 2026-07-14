@@ -176,10 +176,10 @@ Then provide a **Nav2 costmap plugin** that renders `traversability` into a `cos
   - GNSS-denied fallback: **[KISS-ICP](https://github.com/PRBonn/kiss-icp)** (parameter-free LiDAR odometry, has a ROS 2 node) and/or **[FAST-LIO2](https://github.com/hku-mars/FAST_LIO)** ([ROS 2 port](https://github.com/Ericsii/FAST_LIO_ROS2)).
   - Relocalization/place recognition: Scan Context (concept) for GNSS-denied recovery.
 - **Steps:**
-  1. Solid GNSS-RTK + IMU + wheel-odom fusion; publish `/localization/health` (covariance trace + NIS/chi-square innovation test).
-  2. Add **innovation gating** to reject GNSS multipath/outliers.
-  3. Add **LiDAR-odometry fallback** (KISS-ICP) auto-engaged when GNSS integrity drops.
-  4. Map-relative localization against your prior field map (beats row aliasing using the GNSS prior).
+  1. Establish the profile-specific baseline: **GNSS-RTK + IMU + wheel odometry** for RTK-equipped products, or **LIO + wheel odometry + commissioned map-relative localization** for the no-runtime-RTK profile in `12`; publish `/localization/health` (covariance/protection levels + NIS/chi-square innovation tests).
+  2. Add **innovation gating** to reject ordinary-GNSS or RTK multipath/outliers according to the selected profile.
+  3. Integrate and monitor **LiDAR-inertial odometry** as the no-runtime-RTK profile's primary local odometry and the RTK-equipped profile's automatic GNSS-denied fallback.
+  4. Add map-relative localization against the prior field map; use a trustworthy coarse GNSS prior when available, but retain a GNSS-denied relocalization path.
 - **Acceptance:** induce GNSS dropout in sim/field → localization detects it, switches to LiDAR odometry, and behavior slows rather than drifting silently.
 
 **Phase 1 exit:** a semantic, temporal world model + traversability + field memory + honest localization confidence, replacing the flat costmap — all replayable and safe.

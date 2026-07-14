@@ -111,6 +111,8 @@ earth/ECEF
 
 Store the map origin as latitude, longitude, ellipsoidal height, datum, projection/CRS, geoid handling, and map version. Never optimize directly in latitude/longitude degrees. Use GDAL/PROJ or an equivalent audited geodesy library to transform orthomosaic coordinates and GNSS fixes into local ENU metres.
 
+**Frame invariant:** `odom` must be gravity-aligned: its z-axis is parallel to `map` Up, leaving only planar translation and yaw between `map` and `odom`. If the LIO implementation exposes an arbitrary non-gravity-aligned world frame, insert an explicit gravity-aligned odometry frame before applying the planar global correction. L0 must test this invariant from stationary gravity estimates and known roll/pitch motions.
+
 ### 3.2 Single-authority rule
 
 There must be exactly one dynamic publisher for each TF edge:
@@ -125,25 +127,22 @@ Do **not** broadcast a second dynamic `map → base_link` edge. TF is a tree; `b
 
 ### 3.3 Transform computation
 
-At measurement timestamp `t`, the global localizer estimates the robot pose in the map frame:
+At localization measurement timestamp `t_m`, the global estimator maintains a planar robot pose:
 
 ```text
-T_map_base(t) = SE2(x, y, yaw)
+T_map_base_se2(t_m) = SE2(x, y, yaw)
 ```
 
-It retrieves the time-aligned LIO transform:
+LIO still provides the full local transform `T_odom_base_se3(t)`. Define `Π_SE2(T)` as the projection that keeps `x`, `y`, and yaw and discards `z`, roll, and pitch. Compute the planar correction from matching planar quantities:
 
 ```text
-T_odom_base(t)
+T_odom_base_se2(t) = Π_SE2(T_odom_base_se3(t))
+T_map_odom_se2(t) = T_map_base_se2(t) · inverse(T_odom_base_se2(t))
 ```
 
-Then computes:
+Broadcast `T_map_odom_se2` as a planar `map → odom` transform. The normal TF composition with the full LIO `odom → base_link` retains LIO's local terrain-following `z`, roll, and pitch in the resulting `map → base_link`, while the global estimator corrects only `x`, `y`, and yaw.
 
-```text
-T_map_odom(t) = T_map_base(t) · inverse(T_odom_base(t))
-```
-
-The localizer broadcasts `T_map_odom`. Any consumer obtains the robot pose using:
+Any consumer obtains the robot pose using:
 
 ```cpp
 lookupTransform("map", "base_link", stamp)
@@ -151,26 +150,38 @@ lookupTransform("map", "base_link", stamp)
 
 In tf2 language, that returns the pose of `base_link` expressed in `map`, commonly described as the `map → base_link` transform. A component that literally requires `base_link → map` must request the reverse lookup or invert the result; no additional broadcaster is needed.
 
-### 3.4 Planar projection
+### 3.4 Planar pose and covariance wire format
 
-LIO may publish a full SE(3) `odom → base_link`. The global correction is planar:
+The canonical localization output should be a custom `PlanarPoseWithCovarianceStamped` containing `(x, y, yaw)` and a row-major 3×3 covariance. This avoids pretending that the global layer estimates height, roll, or pitch. Define the interface explicitly:
 
 ```text
-z = 0
-roll = 0
-pitch = 0
-yaw = estimated map yaw correction
+std_msgs/Header header        # frame_id must be map
+float64 x_m
+float64 y_m
+float64 yaw_rad               # wrapped to the documented interval
+float64[9] covariance         # row-major [x_m, y_m, yaw_rad]
 ```
 
-For consumers requiring a strictly planar robot pose, publish an additional `PoseWithCovarianceStamped` or `Odometry` message containing `(x, y, yaw)` and a 3×3 covariance. Do not distort the physical sensor TF tree merely to force the robot onto a mathematical plane.
+The covariance units are `m²`, `m²`, `rad²`, and the corresponding cross-unit products. Interface tests must verify symmetry, positive semidefiniteness within numerical tolerance, yaw wrapping, units, and lossless custom-message ↔ 6×6 compatibility conversion for the planar entries.
 
-### 3.5 Correction behavior
+For compatibility, a `PoseWithCovarianceStamped` or `Odometry` bridge may embed the planar covariance in the standard row-major 6×6 ordering `[x, y, z, roll, pitch, yaw]`:
+
+```text
+Pxx      index 0       Pxy      indices 1, 6
+Pyy      index 7       PxYaw    indices 5, 30
+PYawYaw  index 35      PyYaw    indices 11, 31
+```
+
+Set `z`, roll, and pitch covariance to documented large finite variances when publishing a strictly planar compatibility pose; never set unestimated dimensions to zero variance. Alternatively publish the full composed TF pose and its separately derived local-attitude uncertainty, while keeping the custom planar message authoritative for global localization.
+
+### 3.5 Correction timing and behavior
 
 - `odom → base_link` must never jump.
 - `map → odom` may change when a global observation is accepted, as REP-105 permits.
+- Evaluate delayed measurements and residuals at their source timestamp `t_m` using time-aligned TF.
+- After optimization, propagate the optimized state through LIO to the latest common publication time `t_p`; compute both `T_map_base_se2(t_p)` and `T_odom_base_se2(t_p)` at that same timestamp.
+- Publish `map → odom` stamped at `t_p`, not repeatedly with an old measurement timestamp. Report the last trusted global-observation time and age in diagnostics.
 - Rate-limit or filter correction delivery for visualization and planning if needed, but do not hide a large localization inconsistency from the integrity monitor.
-- Compute transforms at the measurement timestamp, not at callback receipt time.
-- Re-broadcast the latest optimized correction at a stable rate while preserving its source timestamp and diagnostic age.
 
 ---
 
@@ -418,7 +429,13 @@ For each optimized keyframe:
 - Store pose covariance, map uncertainty, visibility mask, and condition metadata.
 - Generate hard negatives from nearby repeated rows/tunnels and visually similar remote locations.
 
-Split by **route, day, and condition**, not random frames. Adjacent frames are nearly duplicates; random frame splitting will produce misleading test accuracy. Keep at least one complete route/day as an untouched final validation set.
+Split by **route, day, and condition**, not random frames. Adjacent frames are nearly duplicates; random frame splitting will produce misleading test accuracy. Use three explicitly different protocols:
+
+1. **Same-view localization:** the commissioned ground map may cover the route, but every query session/day is held out from map construction, descriptor training, threshold tuning, and map alignment. This measures repeat localization against a previously built map.
+2. **Cross-view generalization:** hold out complete routes/areas and remove their ground-map tiles from candidate generation. Evaluate the aerial branch alone so same-view fallback cannot hide cross-view failure.
+3. **End-to-end deployment:** publish a coverage manifest stating which tiles have commissioned ground data, aerial-only data, or no valid map. Test only on later query sessions and report results by coverage class.
+
+Keep at least one complete query day as an untouched final validation set. No final-validation sample may influence map alignment, model selection, thresholds, or uncertainty calibration.
 
 ---
 
@@ -704,6 +721,7 @@ Extend the implementation-guide monorepo with:
 ros2_ws/src/
 ├── jabas_interfaces/
 │   ├── msg/
+│   │   ├── PlanarPoseWithCovarianceStamped.msg
 │   │   ├── LocalizationStatus.msg
 │   │   ├── LocalizationHypothesis.msg
 │   │   ├── LocalizationHypothesisArray.msg
@@ -759,7 +777,7 @@ tools/localization/
 | `map_registration` | Geometric/semantic SE(2) refinement and covariance estimation |
 | `planar_fusion` | Fixed-lag estimation, hypothesis management, and `T_map_base` estimate |
 | `localization_integrity` | Gates measurements, computes protection levels/mode, emits diagnostics |
-| `map_odom_broadcaster` | Time-aligned `T_map_odom = T_map_base · T_odom_base⁻¹` publication |
+| `map_odom_broadcaster` | At one common timestamp, publish planar `T_map_odom_se2 = T_map_base_se2 · inverse(Π_SE2(T_odom_base_se3))` |
 | `map_server` | Loads immutable map version, tiles, descriptors, metadata, and uncertainty |
 
 The broadcaster may be integrated into `planar_fusion`, but its TF ownership and timestamp contract must remain explicit.
@@ -782,6 +800,7 @@ Inputs
   /tf, /tf_static
 
 Outputs
+  /localization/planar_pose             jabas_interfaces/PlanarPoseWithCovarianceStamped
   /localization/pose                    geometry_msgs/PoseWithCovarianceStamped
   /localization/status                  jabas_interfaces/LocalizationStatus
   /localization/hypotheses              jabas_interfaces/LocalizationHypothesisArray
@@ -912,15 +931,18 @@ Report all relevant metrics; do not summarize them as “sub-centimeter localiza
 **Build:**
 
 - Define map origin/CRS, frames, TF authorities, timestamps, pose convention, covariance convention, and localization modes.
-- Define accuracy, yaw, availability, false-confidence, startup, and recovery metrics.
+- Create a version-controlled `localization_requirements.yaml` that freezes requirement IDs, hardware profile, map version, datasets, reference method, ODD, percentile/statistical definition, and numeric thresholds before later phase gates are run.
+- At minimum define `LOC-XY-P95-M`, `LOC-YAW-P95-RAD`, `LOC-REPEAT-XTRACK-P95-M`, `LOC-AVAILABILITY-MIN`, `LOC-FALSE-CONFIDENT-MAX`, `LOC-ODOM-ONLY-MAX-S`, `LOC-ODOM-ONLY-MAX-M`, `LOC-RELOCALIZE-P95-S`, `LOC-TF-AGE-P99-MS`, `LOC-E2E-LATENCY-P99-MS`, `LOC-LIO-RPE-TRANS-P95-M`, `LOC-LIO-RPE-YAW-P95-RAD`, `LOC-ODOM-JUMP-MAX-M`, `LOC-ODOM-JUMP-MAX-RAD`, `LOC-TIME-FAULT-DETECTION-RECALL`, `LOC-SYNTH-TRANS-P95-M`, `LOC-SYNTH-YAW-P95-RAD`, `LOC-MAP-ALIGN-P95-M`, `LOC-MAP-ALIGN-P95-RAD`, `LOC-TUNNEL-CLOSURE-MAX-M`, `LOC-TUNNEL-CLOSURE-MAX-RAD`, `LOC-RETRIEVAL-RECALL-AT-K`, and `LOC-UNCERTAINTY-CALIBRATION-MAX`.
+- Start with the proposal targets in Section 2, then replace every provisional value with an approved, measurable value after the map/sensor audit. A phase cannot pass while a referenced threshold is unset.
 - Inventory exact sensor firmware, rates, fields of view, networking, and compute.
-- Create the canonical MCAP topic set and metadata manifest.
+- Create the canonical MCAP topic set, coverage manifest, and metadata schema.
 
 **Acceptance:**
 
-- TF graph has one authority per edge.
-- A recorded bag can be transformed into a common time/frame domain without extrapolation errors.
-- Requirements state percentile, conditions, reference, and failure behavior.
+- TF graph has one authority per edge, transform-direction tests pass, and the gravity-alignment invariant between `map` and `odom` passes the frozen roll/pitch test corpus.
+- A recorded bag transforms into a common time/frame domain with zero TF extrapolation failures over the acceptance corpus.
+- Every later phase gate references frozen requirement IDs, named datasets, a software commit, and a generated metrics report.
+- Requirements state percentile, operating conditions, independent reference, sample-count minimum, and failure behavior.
 
 ### Phase L1 — Calibration and baseline local odometry (4–8 weeks)
 
@@ -933,10 +955,10 @@ Report all relevant metrics; do not summarize them as “sub-centimeter localiza
 
 **Acceptance:**
 
-- Repeated closed loops quantify translational/yaw drift.
-- Timing perturbation tests show monitor sensitivity.
-- Calibration reports and manifests are reproducible.
-- `odom → base_link` is smooth under GNSS loss.
+- Closed-loop and segment-relative errors meet `LOC-LIO-RPE-TRANS-P95-M` and `LOC-LIO-RPE-YAW-P95-RAD` on the named L1 field corpus.
+- Injected timing faults at and above the frozen minimum are detected with at least `LOC-TIME-FAULT-DETECTION-RECALL`.
+- Independent recalibration runs meet the frozen extrinsic/time-offset reproducibility bounds and generate complete manifests.
+- `odom → base_link` has no translation or yaw discontinuity above `LOC-ODOM-JUMP-MAX-M` or `LOC-ODOM-JUMP-MAX-RAD` during the GNSS-loss corpus.
 
 ### Phase L2 — Map compiler and deterministic baseline (4–8 weeks)
 
@@ -949,9 +971,9 @@ Report all relevant metrics; do not summarize them as “sub-centimeter localiza
 
 **Acceptance:**
 
-- Known synthetic map transforms are recovered within tolerance.
-- Repeated structures produce ambiguity rather than false certainty.
-- Normal GPS outliers do not pull a valid map match.
+- Synthetic SE(2) cases meet `LOC-SYNTH-TRANS-P95-M` and `LOC-SYNTH-YAW-P95-RAD` for every declared map resolution.
+- Repeated-structure tests produce `AMBIGUOUS` or the correct dominant mode with zero false-confident updates, satisfying `LOC-FALSE-CONFIDENT-MAX`.
+- Injected ordinary-GNSS biases/outliers up to the frozen fault envelope do not move an accepted high-integrity map solution beyond its protection level.
 
 ### Phase L3 — RTK commissioning mapper (6–10 weeks)
 
@@ -964,9 +986,9 @@ Report all relevant metrics; do not summarize them as “sub-centimeter localiza
 
 **Acceptance:**
 
-- Held-out RTK residuals satisfy the chosen commissioning-map target.
-- Bidirectional tunnel traversals align without using tunnel-interior RTK as false truth.
-- Every ground keyframe traces to source log, calibration, map, and optimizer commit.
+- Independent RTK query sessions meet `LOC-MAP-ALIGN-P95-M` and `LOC-MAP-ALIGN-P95-RAD`; none of those sessions were used for aerial alignment, map optimization, or threshold selection.
+- Bidirectional tunnel closure discrepancies remain below `LOC-TUNNEL-CLOSURE-MAX-M` and `LOC-TUNNEL-CLOSURE-MAX-RAD` without treating tunnel-interior RTK as direct truth.
+- Every ground keyframe traces to source log, calibration, map, optimizer commit, and pose covariance.
 
 ### Phase L4 — Same-view runtime localization (6–10 weeks)
 
@@ -979,10 +1001,10 @@ Report all relevant metrics; do not summarize them as “sub-centimeter localiza
 
 **Acceptance:**
 
-- Runtime localizes on held-out commissioning routes without RTK input.
-- It survives specified GNSS dropout lengths.
-- Wrong neighboring-tunnel candidates are rejected or retained as ambiguity.
-- TF and estimator latency remain within the control/planning budget.
+- On held-out **query sessions** over commissioned ground-map coverage, runtime meets `LOC-XY-P95-M`, `LOC-YAW-P95-RAD`, `LOC-REPEAT-XTRACK-P95-M`, and `LOC-AVAILABILITY-MIN` with RTK excluded from estimator inputs.
+- It remains within both `LOC-ODOM-ONLY-MAX-S` and `LOC-ODOM-ONLY-MAX-M` during the frozen GNSS/global-map dropout scenarios.
+- Neighboring-tunnel tests produce zero false-confident global updates and satisfy `LOC-FALSE-CONFIDENT-MAX`; unresolved cases remain explicitly ambiguous.
+- `LOC-TF-AGE-P99-MS` and `LOC-E2E-LATENCY-P99-MS` pass on the declared production hardware under recorded peak load.
 
 ### Phase L5 — Learned aerial/ground bridge (8–16 weeks)
 
@@ -995,10 +1017,10 @@ Report all relevant metrics; do not summarize them as “sub-centimeter localiza
 
 **Acceptance:**
 
-- Evaluation uses held-out route/day/condition splits.
-- Learned retrieval exceeds deterministic aerial baseline without increasing false-confident matches.
-- Fine pose predictions are calibrated by error versus predicted uncertainty.
-- Ground-map localization remains the safe primary path.
+- Same-view, aerial-only cross-view, and end-to-end coverage-manifest evaluations use the separate split protocols from Sections 6.6 and 13.2.
+- Aerial retrieval meets `LOC-RETRIEVAL-RECALL-AT-K` and exceeds the deterministic aerial baseline without violating `LOC-FALSE-CONFIDENT-MAX`.
+- Fine pose error meets the frozen aerial-only SE(2) thresholds, and predicted uncertainty meets `LOC-UNCERTAINTY-CALIBRATION-MAX` on held-out days/conditions.
+- Ground-map localization remains the safe primary path where the coverage manifest declares it available.
 
 ### Phase L6 — Production hardening and lifecycle (ongoing)
 
@@ -1030,9 +1052,15 @@ Report all relevant metrics; do not summarize them as “sub-centimeter localiza
 6. **Field validation:** RTK installed only as a non-fused reference on held-out runs.
 7. **Seasonal regression:** repeat selected routes after meaningful appearance/map changes.
 
-### 13.2 No label leakage
+### 13.2 No label or map-coverage leakage
 
-During final validation, RTK is logged as reference but is not provided to the runtime estimator, candidate generator, or learned network. Validation routes/days are excluded from map alignment, model training, hyperparameter selection, and threshold tuning.
+During final validation, RTK is logged as an independent reference but is not provided to the runtime estimator, candidate generator, or learned network. Apply the three protocols separately:
+
+- **Same-view repeat localization:** the route is legitimately present in the commissioned ground map, but all query sessions/days are later and held out from map construction, aerial alignment, model fitting, uncertainty calibration, and threshold tuning.
+- **Aerial-only cross-view localization:** complete routes/areas are excluded from the commissioned ground map and ground candidate database. Disable same-view fallback and evaluate only aerial retrieval/fine alignment.
+- **End-to-end deployment:** freeze and publish the map coverage manifest before evaluation. Report metrics separately for ground-commissioned, aerial-only, and unmapped coverage; unmapped regions must not be silently counted as localization success.
+
+Use a final untouched query day for release evidence. No release-validation observation may influence map alignment, model selection, thresholds, protection-level calibration, or failure-policy tuning.
 
 ### 13.3 Metrics
 
@@ -1139,7 +1167,7 @@ A complete first production candidate consists of:
 8. Aerial/ground dataset generator.
 9. Coarse retrieval and fine SE(2) correlation models.
 10. Geometric refinement with directional covariance.
-11. Robust fixed-lag planar estimator.
+11. Robust fixed-lag planar estimator and canonical 3×3 planar covariance API, with a documented 6×6 ROS compatibility bridge.
 12. Multi-hypothesis relocalization manager.
 13. `map → odom` TF publisher and planar pose API.
 14. Localization integrity/protection-level monitor.
