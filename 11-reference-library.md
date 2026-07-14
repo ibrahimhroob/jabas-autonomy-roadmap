@@ -21,6 +21,9 @@ Compliance note: descriptions are paraphrased/summarized from the projects' own 
 | diagnostics | https://github.com/ros/diagnostics | Health/telemetry backbone. |
 
 ## B. Localization, odometry, SLAM, state estimation
+
+The complete JABAS planar localization architecture and execution plan is in [`12-planar-agricultural-localization-design.md`](12-planar-agricultural-localization-design.md).
+
 | Project | Link | Use it for | Notes |
 |---|---|---|---|
 | robot_localization | https://github.com/cra-ros-pkg/robot_localization | EKF/UKF GNSS+IMU+odom fusion | Start here for P1.4. |

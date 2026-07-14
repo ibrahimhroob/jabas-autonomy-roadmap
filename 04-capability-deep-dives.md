@@ -192,7 +192,7 @@ Notation: poses on SE(3), states `x`, controls `u`, measurements `z`, belief `be
 
 **Implementation strategy.** Phase 1: solid ESKF fusion + covariance/NIS monitoring + a "localization confidence" topic. Phase 2: automatic GNSS fault exclusion + LiDAR-odom fallback. Phase 3: automatic relocalization from place recognition; map-relative localization against field maps.
 
-**ROS 2 integration.** Replace/augment `robot_localization`; publish `/localization/health`; behavior tree reacts to low integrity (slow, stop, relocalize, escalate). Use `/tf` discipline.
+**ROS 2 integration.** Replace/augment `robot_localization`; publish `/localization/health`; behavior tree reacts to low integrity (slow, stop, relocalize, escalate). Use `/tf` discipline. For the concrete planar frame contract, RTK-supervised commissioning workflow, cross-view learning pipeline, estimator, integrity gates, and acceptance plan, see [`12-planar-agricultural-localization-design.md`](12-planar-agricultural-localization-design.md).
 
 **Performance.** ESKF is cheap; factor-graph smoothing bounded by window size; LiDAR-odom is the heavy part (GPU/opt). Must stay real-time (localization can't lag).
 

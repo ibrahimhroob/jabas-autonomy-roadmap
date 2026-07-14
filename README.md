@@ -25,6 +25,7 @@ This is a **CTO-level mentorship program**, not a tutorial. It is deliberately o
 | [`09-learning-strategy.md`](09-learning-strategy.md) | How to learn hard things without burning out | Read when overwhelmed |
 | `10-implementation-guide.md` | Build plan: tech decisions, workspace/code structure, verified repos, Phase 0/1 how-to | Engineering execution |
 | `11-reference-library.md` | Annotated catalogue of real repos, datasets, courses, papers to build on | Pick tools to integrate |
+| [`12-planar-agricultural-localization-design.md`](12-planar-agricultural-localization-design.md) | Full SE(2) localization design: aerial map, RTK commissioning, learned cross-view features, TF, integrity, and validation | Build the no-infrastructure localization system |
 
 **A rule for this whole document:** you will never study everything here. That is the point. This is a *map of the territory* so you can choose routes deliberately instead of reacting. The `09-learning-strategy.md` file is arguably the most important — read it early.
 
