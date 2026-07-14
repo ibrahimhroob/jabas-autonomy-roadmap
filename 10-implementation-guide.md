@@ -170,6 +170,7 @@ Then provide a **Nav2 costmap plugin** that renders `traversability` into a `cos
 - **Acceptance:** over repeated passes, the robot demonstrably avoids historically-troublesome areas and improves route/timing choices. This is your headline demo.
 
 ### P1.4 — Robust localization + confidence
+- **Detailed design:** [`12-planar-agricultural-localization-design.md`](12-planar-agricultural-localization-design.md) specifies the planar `map → odom → base_link` contract, temporary RTK commissioning, robot-view and aerial-map localization, learned cross-view features, multi-hypothesis fusion, integrity, and validation.
 - **Build on:**
   - Fusion: **[robot_localization](https://github.com/cra-ros-pkg/robot_localization)** (EKF/UKF, GNSS+IMU+odom) to start; graduate to a **[GTSAM](https://github.com/borglab/gtsam)** factor-graph smoother for tight fusion + integrity.
   - GNSS-denied fallback: **[KISS-ICP](https://github.com/PRBonn/kiss-icp)** (parameter-free LiDAR odometry, has a ROS 2 node) and/or **[FAST-LIO2](https://github.com/hku-mars/FAST_LIO)** ([ROS 2 port](https://github.com/Ericsii/FAST_LIO_ROS2)).

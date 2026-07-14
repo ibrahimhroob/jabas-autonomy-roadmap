@@ -61,7 +61,7 @@ Goal: turn raw sensor streams into **detections, semantics, and geometry** with 
 - **Backbone:** tightly-coupled **GNSS-RTK + IMU + wheel odometry** fusion (an error-state Kalman filter or factor-graph smoother like GTSAM). This gives you global, drift-free, metric pose in open field.
 - **LiDAR/visual odometry & SLAM** for GNSS-denied stretches (under tree canopy, in barns, near tall structures): LIO-SAM / FAST-LIO2 / KISS-ICP style LiDAR-inertial odometry; visual-inertial (VINS-Fusion, ORB-SLAM3) as complement.
 - **Map-relative localization:** localize against your *own prior map* of the field (from previous passes) — a huge ag advantage since you revisit fields. This enables "the tree is here again" recognition and centimeter repeatability for row-following.
-- **Self-healing localization (differentiator):** continuous integrity monitoring — detect GNSS multipath/spoofing, RTK dropout, wheel slip, and *automatically reconfigure the fusion* (drop bad sensors, switch to LiDAR odometry, trigger relocalization). See `04` for the deep dive.
+- **Self-healing localization (differentiator):** continuous integrity monitoring — detect GNSS multipath/spoofing, RTK dropout, wheel slip, and *automatically reconfigure the fusion* (drop bad sensors, switch to LiDAR odometry, trigger relocalization). See `04` for the capability deep dive and [`12-planar-agricultural-localization-design.md`](12-planar-agricultural-localization-design.md) for the implementable `(x,y,yaw)` aerial-map/RTK-commissioning design.
 
 **Math foundations:** state estimation on manifolds (SO(3)/SE(3)), EKF/ESKF, factor-graph smoothing (MAP inference, iSAM2), consistency & observability, robust cost functions (Huber, switchable constraints).
 
